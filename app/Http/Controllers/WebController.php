@@ -34,17 +34,15 @@ class WebController extends Controller
         return $categories;
     }
 
-    public function getPostsByTags($request)
+    public function getPostsByTags(Request $request)
     {
-        $tags = $request->tags;
-        $filters = $request->filtros;
+        $tags = explode(",",$request['tags']);
+//        $filters = $request->filtros;
 
-        $productsId = Tag_Product::whereIn('tag_id', $tags)->select('product_id');
-
-        if($filters){
+        $productsId = Tag_Product::whereIn('tag_id', $tags)->pluck('product_id');
+//        if($filters){
 //            $productsId = $productsId->where(asdasdas)
-        }
-        $productsId = $productsId->get();
+//        }
 
         $posts = Post::whereIn('product_id',$productsId)->get();
 
@@ -52,7 +50,6 @@ class WebController extends Controller
             $p->product->photos;
             $p->product->tags;
         }
-
         return $posts;
     }
 
@@ -61,8 +58,6 @@ class WebController extends Controller
         $id =$request->id;
 
         $post = Post::where('id',$id)
-                ->where('endDate', '>', new DateTime())
-                ->where('startDate', '<', new DateTime())
                 ->first();
 
         if($post) {
@@ -70,10 +65,10 @@ class WebController extends Controller
             $post->discount = $post->actualDiscount();
             $post->nextDiscount = $post->nextDiscount();
             $post->actualPrice = $post->actualPrice();
+            $post->originalPrice = $post->product->price;
             $post->qtyToNextDiscount = $post->qtyToNextDiscount();
             $post->nextDiscountPrice = $post->nextDiscount * $post->product->price;
             $post->recommendations = $post->recommendations();
-
             $post->product->photos;
         }
 

@@ -47,9 +47,10 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials)) {
             // Authentication passed...
-            return 1;
+            return response()->json(['success' => 'success', 200]);
+        } else {
+            return abort(403,'Login');
         }
-        return 0;
     }
 
     public function logout()

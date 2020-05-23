@@ -17,8 +17,8 @@ class Product extends Model
         return $this->belongsToMany(
             'App\Tag',
             'tag_products',
-            'tag_id',
-            'product_id'
+            'product_id',
+            'tag_id'
         );
     }
 }

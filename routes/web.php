@@ -34,28 +34,34 @@ Route::get('/', function () {
 
 Auth::routes();
 
-Route::get('/loginFront', 'Auth\LoginController@authenticate')->name('loginFront');
-Route::get('/logoutFront', 'Auth\LoginController@logout')->name('logoutFront');
+Route::get('/login-front', 'Auth\LoginController@authenticate')->name('loginFront')->middleware('cors');
+Route::get('/logout-front', 'Auth\LoginController@logout')->name('logoutFront')->middleware('cors');
 
-Route::get('/tags', 'WebController@getTags')->name('getTags');
-Route::get('/categories', 'WebController@getCategories')->name('getCategories');
-Route::get('/posts', 'WebController@getPostsByTags')->name('getPosts');
-Route::get('/post', 'WebController@getPostById')->name('getPost');
+Route::get('/tags', 'WebController@getTags')->name('getTags')->middleware('cors');
+Route::get('/categories', 'WebController@getCategories')->name('getCategories')->middleware('cors');
+Route::get('/posts', 'WebController@getPostsByTags')->name('getPosts')->middleware('cors');
+Route::get('/post', 'WebController@getPostById')->name('getPost')->middleware('cors');
 
-Route::get('/home', 'HomeController@index')->name('home');
-Route::get('/addProduct', 'HomeController@addProduct');
-Route::get('/addSubscription', 'HomeController@addSubscription');
-Route::get('/addTagProducts', 'HomeController@addTagProducts');
-Route::get('/addPost', 'HomeController@addPost');
-Route::get('/addProductImages', 'HomeController@addProductImages');
-Route::get('/addDiscounts', 'HomeController@addDiscounts');
-Route::get('/addTags', 'HomeController@addTags');
-Route::get('/addSubcategoryTags', 'HomeController@addSubcategoryTags');
-Route::get('/addProductCategories', 'HomeController@addProductCategories');
-Route::get('/addCategory', 'HomeController@addCategory');
-Route::get('/addSubcategory', 'HomeController@addSubcategory');
-Route::get('/busquedaParaSenior', 'HomeController@busquedaParaSenior');
-Route::get('/borrarParaSenior', 'HomeController@borrarParaSenior');
+Route::get('/home', 'HomeController@index')->name('home')->middleware('cors');
+Route::get('/addProduct', 'HomeController@addProduct')->middleware('cors');
+Route::get('/addSubscription', 'HomeController@addSubscription')->middleware('cors');
+Route::get('/addTagProducts', 'HomeController@addTagProducts')->middleware('cors');
+Route::get('/addPost', 'HomeController@addPost')->middleware('cors');
+Route::get('/addProductImages', 'HomeController@addProductImages')->middleware('cors');
+Route::get('/addDiscounts', 'HomeController@addDiscounts')->middleware('cors');
+Route::get('/addTags', 'HomeController@addTags')->middleware('cors');
+Route::get('/addSubcategoryTags', 'HomeController@addSubcategoryTags')->middleware('cors');
+Route::get('/addProductCategories', 'HomeController@addProductCategories')->middleware('cors');
+Route::get('/addCategory', 'HomeController@addCategory')->middleware('cors');
+Route::get('/addSubcategory', 'HomeController@addSubcategory')->middleware('cors');
+
+Route::get('/subscribe', 'HomeController@subscribe')->middleware('cors');
+Route::get('/subscriptions', 'HomeController@subscriptions')->middleware('cors');
+
+
+
+Route::get('/busquedaParaSenior', 'HomeController@busquedaParaSenior')->middleware('cors');
+Route::get('/borrarParaSenior', 'HomeController@borrarParaSenior')->middleware('cors');
 
 
 Route::get('/profile', function () {
