@@ -62,6 +62,7 @@ Route::get('/subscriptions', 'HomeController@subscriptions')->middleware('cors')
 
 Route::get('/busquedaParaSenior', 'HomeController@busquedaParaSenior')->middleware('cors');
 Route::get('/borrarParaSenior', 'HomeController@borrarParaSenior')->middleware('cors');
+Route::get('/armarDescuentos', 'HomeController@armarDescuentos')->middleware('cors');
 
 
 Route::get('/profile', function () {

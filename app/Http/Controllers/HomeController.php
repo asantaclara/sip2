@@ -89,9 +89,7 @@ class HomeController extends Controller
                     'discountPercent' => 1 - $s->first()->post->actualPrice() / $s->first()->post->product->price,
                     'discountAmount' => $s->first()->post->product->price - $s->first()->post->actualPrice(),
                     'totalDiscountAmount' => ($s->first()->post->product->price - $s->first()->post->actualPrice()) * $s->sum('quantity'),
-                    'bookingAmount' => $s->sum(function ($a) {
-                                            return $a->bookingPrice * $a->quantity;
-                                        }),
+                    'bookingAmount' => $s->sum(function ($a) {return $a->bookingPrice * $a->quantity;}),
                     'endDate' => $s->first()->post->endDate,
                     'photos' => $s->first()->post->product->photos,
                     'productTitle' => $s->first()->post->product->title
@@ -277,4 +275,24 @@ class HomeController extends Controller
             return response()->json(['error' => 'Forbidden', 403]);
         }
     }
+
+//    public function armarDescuentos(Request $request)
+//    {
+//        $posts = Post::all();
+//
+//        foreach ($posts as $p){
+//            $discount = 0;
+//            $qty = 0;
+//
+//            for ( $i = 1 ; $i <= random_int(3,10); $i++) {
+//                $qty += random_int(10,20);
+//                $discount += random_int(1,10) / 100;
+//                Discount::create([
+//                    'post_id' => $p->id,
+//                    'quantityStart' => $qty,
+//                    'discount' => $discount,
+//                ]);
+//            }
+//         }
+//    }
 }
