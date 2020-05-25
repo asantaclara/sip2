@@ -51,7 +51,7 @@ class Post extends Model
 
     public function actualPrice()
     {
-        return (1-$this->actualDiscount()) * $this->product->price;
+        return round((1-$this->actualDiscount()) * $this->product->price,2);
     }
 
     public function recommendations()
@@ -65,7 +65,14 @@ class Post extends Model
             ->limit(3)
             ->get();
 
+        $extraPosts = Post::whereNotIn('product_id',$productsId)
+            ->where('id','!=', $this->id)
+            ->limit(3-count($posts))
+            ->get();
+
         $result = [];
+
+        $posts = $posts->merge($extraPosts);
 
         foreach ($posts as $post) {
             $aux = [];

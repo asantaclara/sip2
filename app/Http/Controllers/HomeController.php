@@ -12,6 +12,7 @@ use App\Subcategory_Tags;
 use App\Subscription;
 use App\Tag;
 use App\Tag_Product;
+use App\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,34 +20,21 @@ use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
-
-    /**
-     * Show the application dashboard.
-     *
-     * @return \Illuminate\Contracts\Support\Renderable
-     */
     public function index()
     {
         return view('home');
     }
-
+    private function checkLogIn($token)
+    {
+       return User::where('remember_token', $token)->first();
+    }
     public function subscribe(Request $request)
     {
-        if(Auth::user()->role == 0) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user->role == 0) {
             $qty = floor($request['qty']);
-            $post = $request['post_id'];
-
-            $post = Post::where('id', $post)->get()->first();
-
+            $post = Post::where('id', $request['post_id'])->get()->first();
             if(!$post) {
                 return response()->json(['error' => 'Post not found', 406]);
 
@@ -54,10 +42,9 @@ class HomeController extends Controller
             if($qty < 1){
                 return response()->json(['error' => 'quantity < 1', 406]);
             }
-
             $subscription = Subscription::create([
                 'post_id' => $request['post_id'],
-                'user_id' => Auth::user()->id,
+                'user_id' => $user->id,
                 'dateTime' => Carbon::now(),
                 'bookingPrice' => $post->actualPrice(),
                 'quantity' => $qty,
@@ -70,11 +57,11 @@ class HomeController extends Controller
 
     public function subscriptions(Request $request)
     {
-        if(Auth::user()->role == 0) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user->role == 0) {
             $result = collect();
-
-            $subscriptions = Subscription::where('user_id', Auth::user()->id)->get()->groupBy('post_id');
-
+            $subscriptions = Subscription::where('user_id', $user->id)->get()->groupBy('post_id');
             if(count($subscriptions) < 1) {
                 return response()->json(['error' => 'No subscriptions found, 404']);
             }
@@ -86,10 +73,10 @@ class HomeController extends Controller
                     'price' => $s->first()->post->product->price,
                     'actualPrice' => $s->first()->post->actualPrice(),
                     'quantity' => $s->sum('quantity'),
-                    'discountPercent' => 1 - $s->first()->post->actualPrice() / $s->first()->post->product->price,
-                    'discountAmount' => $s->first()->post->product->price - $s->first()->post->actualPrice(),
-                    'totalDiscountAmount' => ($s->first()->post->product->price - $s->first()->post->actualPrice()) * $s->sum('quantity'),
-                    'bookingAmount' => $s->sum(function ($a) {return $a->bookingPrice * $a->quantity;}),
+                    'discountPercent' => $s->first()->post->actualDiscount(),
+                    'discountAmount' => round($s->first()->post->product->price - $s->first()->post->actualPrice(),2),
+                    'totalDiscountAmount' => round(($s->first()->post->product->price - $s->first()->post->actualPrice()) * $s->sum('quantity'),2),
+                    'paid' => round($s->sum(function ($a) {return $a->bookingPrice * $a->quantity;}) * 0.1,2),
                     'endDate' => $s->first()->post->endDate,
                     'photos' => $s->first()->post->product->photos,
                     'productTitle' => $s->first()->post->product->title
@@ -98,8 +85,9 @@ class HomeController extends Controller
             }
             $aux2 = [
                 'beforeDiscount' => $result->sum('totalPrice'),
-                'discount' => $result->sum('discountAmount'),
-                'total' => $result->sum('totalPrice') - $result->sum('totalDiscountAmount')
+                'discount' => $result->sum('totalDiscountAmount'),
+                'totalPaid' => $result->sum('paid'),
+                'total' => $result->sum('totalPrice') - $result->sum('totalDiscountAmount') - $result->sum('paid'),
             ];
             return [$result, $aux2];
         } else {
@@ -110,7 +98,9 @@ class HomeController extends Controller
     //--------------------------------------Administracion de productos -----------------------------------
     public function addProduct(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             $product = Product::create([
                 'title' => $request['title'],
                 'description' => $request['description'],
@@ -120,13 +110,13 @@ class HomeController extends Controller
         } else {
             return response()->json(['error' => 'Forbidden', 403]);
         }
-
-
     }
 
     public function addSubscription(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             $subscription = Subscription::create([
                 'post_id' => $request['post_id'],
                 'user_id' => $request['user_id'],
@@ -143,7 +133,9 @@ class HomeController extends Controller
 
     public function addTagProducts(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             $subscription = Tag_Product::create([
                 'tag_id' => $request['tag_id'],
                 'product_id' => $request['product_id'],
@@ -156,7 +148,9 @@ class HomeController extends Controller
 
     public function addPost(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             $subscription = Post::create([
             'product_id' => $request['product_id'],
             'startDate' => $request['startDate'],
@@ -170,7 +164,9 @@ class HomeController extends Controller
 
     public function addProductImages(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             $subscription = Product_Image::create([
                 'product_id' => $request['product_id'],
                 'url' => $request['url'],
@@ -183,7 +179,9 @@ class HomeController extends Controller
 
     public function addDiscounts(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             $subscription = Discount::create([
                 'post_id' => $request['post_id'],
                 'quantityStart' => $request['quantityStart'],
@@ -197,7 +195,9 @@ class HomeController extends Controller
 
     public function addTags(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             $subscription = Tag::create([
                 'name' => $request['name'],
             ]);
@@ -209,7 +209,9 @@ class HomeController extends Controller
 
     public function addSubcategoryTags(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             $subscription = Subcategory_Tags::create([
                 'subcategory_id' => $request['subcategory_id'],
                 'tag_id' => $request['tag_id'],
@@ -222,7 +224,9 @@ class HomeController extends Controller
 
     public function addProductCategories(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             $subscription = Product_Category::create([
                 'category_id' => $request['category_id'],
                 'product_id' => $request['product_id'],
@@ -235,7 +239,9 @@ class HomeController extends Controller
 
     public function addCategory(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             $subscription = Product_Category::create([
                 'title' => $request['title'],
             ]);
@@ -247,7 +253,9 @@ class HomeController extends Controller
 
     public function addSubcategory(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             $subscription = Product_Category::create([
             'title' => $request['title'],
             'category_id' => $request['category_id'],
@@ -260,7 +268,9 @@ class HomeController extends Controller
 
     public function busquedaParaSenior(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             return DB::select( DB::raw('SELECT * FROM '.$request['tabla']) );
         } else {
             return response()->json(['error' => 'Forbidden', 403]);
@@ -269,7 +279,9 @@ class HomeController extends Controller
 
     public function borrarParaSenior(Request $request)
     {
-        if(Auth::user()->role == 1) {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user()->role == 1) {
             return DB::select( DB::raw('DELETE FROM '.$request['tabla'].' WHERE ID = '.$request['id']) );
         } else {
             return response()->json(['error' => 'Forbidden', 403]);
@@ -281,17 +293,17 @@ class HomeController extends Controller
 //        $posts = Post::all();
 //
 //        foreach ($posts as $p){
-//            $discount = 0;
+//            $discount = 0.05;
 //            $qty = 0;
 //
-//            for ( $i = 1 ; $i <= random_int(3,10); $i++) {
-//                $qty += random_int(10,20);
-//                $discount += random_int(1,10) / 100;
+//            for ( $i = 1 ; $i <= random_int(4,6); $i++) {
 //                Discount::create([
 //                    'post_id' => $p->id,
 //                    'quantityStart' => $qty,
 //                    'discount' => $discount,
 //                ]);
+//                $qty += random_int(10,20);
+//                $discount += random_int(5,7) / 100;
 //            }
 //         }
 //    }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Providers\RouteServiceProvider;
+use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Support\Facades\Auth;
@@ -45,9 +46,9 @@ class LoginController extends Controller
         $credentials = $request->only('email', 'password');
         $credentials['active'] = 1;
 
-        if (Auth::attempt($credentials)) {
-            // Authentication passed...
-            return response()->json(['success' => 'success', 200]);
+        if (Auth::attempt($credentials, true)) {
+            // Authentireturcation passed...
+            return response()->json([['success' => 'success', 'token'=> Auth::user()->getRememberToken()], 200]);
         } else {
             return abort(403,'Login');
         }
