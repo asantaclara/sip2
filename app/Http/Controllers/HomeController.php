@@ -100,7 +100,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             $product = Product::create([
                 'title' => $request['title'],
                 'description' => $request['description'],
@@ -116,7 +116,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             $subscription = Subscription::create([
                 'post_id' => $request['post_id'],
                 'user_id' => $request['user_id'],
@@ -135,7 +135,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             $subscription = Tag_Product::create([
                 'tag_id' => $request['tag_id'],
                 'product_id' => $request['product_id'],
@@ -150,7 +150,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             $subscription = Post::create([
             'product_id' => $request['product_id'],
             'startDate' => $request['startDate'],
@@ -166,7 +166,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             $subscription = Product_Image::create([
                 'product_id' => $request['product_id'],
                 'url' => $request['url'],
@@ -181,7 +181,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             $subscription = Discount::create([
                 'post_id' => $request['post_id'],
                 'quantityStart' => $request['quantityStart'],
@@ -197,7 +197,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             $subscription = Tag::create([
                 'name' => $request['name'],
             ]);
@@ -211,7 +211,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             $subscription = Subcategory_Tags::create([
                 'subcategory_id' => $request['subcategory_id'],
                 'tag_id' => $request['tag_id'],
@@ -226,7 +226,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             $subscription = Product_Category::create([
                 'category_id' => $request['category_id'],
                 'product_id' => $request['product_id'],
@@ -241,7 +241,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             $subscription = Product_Category::create([
                 'title' => $request['title'],
             ]);
@@ -255,7 +255,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             $subscription = Product_Category::create([
             'title' => $request['title'],
             'category_id' => $request['category_id'],
@@ -270,7 +270,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             return DB::select( DB::raw('SELECT * FROM '.$request['tabla']) );
         } else {
             return response()->json(['error' => 'Forbidden', 403]);
@@ -281,7 +281,7 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
 
-        if($user && $user()->role == 1) {
+        if($user && $user->role == 1) {
             return DB::select( DB::raw('DELETE FROM '.$request['tabla'].' WHERE ID = '.$request['id']) );
         } else {
             return response()->json(['error' => 'Forbidden', 403]);
