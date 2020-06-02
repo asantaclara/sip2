@@ -35,13 +35,15 @@ Route::get('/addPost', 'HomeController@addPost');
 Route::get('/addDiscounts', 'HomeController@addDiscounts');
 Route::get('/addTags', 'HomeController@addTags');
 Route::get('/addSubcategoryTags', 'HomeController@addSubcategoryTags');
-Route::get('/addProductCategories', 'HomeController@addProductCategories');
 Route::get('/addCategory', 'HomeController@addCategory');
 Route::get('/addSubcategory', 'HomeController@addSubcategory');
+Route::get('/graphs', 'HomeController@graphs');
+Route::get('/askForGiftCard', 'HomeController@askForGiftCard');
 
 Route::get('/subscribe', 'HomeController@subscribe');
 Route::get('/subscriptions', 'HomeController@subscriptions');
 
+//Route::get('/addProductCategories', 'HomeController@addProductCategories');
 //Route::get('/armarDescuentos', 'HomeController@armarDescuentos')->middleware('cors');
 //Route::get('/addSubscription', 'HomeController@addSubscription');
 //Route::get('/busquedaParaSenior', 'HomeController@busquedaParaSenior')->middleware('cors');

@@ -8,6 +8,7 @@ use App\Post;
 use App\Product;
 use App\Product_Category;
 use App\Product_Image;
+use App\Subcategory;
 use App\Subcategory_Tags;
 use App\Subscription;
 use App\Tag;
@@ -58,6 +59,7 @@ class HomeController extends Controller
     public function subscriptions(Request $request)
     {
         $user = $this->checkLogIn($request['token']);
+        $user = User::where('id',2)->first();
 
         if($user && $user->role == 0) {
             $result = collect();
@@ -79,7 +81,9 @@ class HomeController extends Controller
                     'paid' => round($s->sum(function ($a) {return $a->bookingPrice * $a->quantity;}) * 0.1,2),
                     'endDate' => $s->first()->post->endDate,
                     'photos' => $s->first()->post->product->photos,
-                    'productTitle' => $s->first()->post->product->title
+                    'productTitle' => $s->first()->post->product->title,
+                    'finalizada' => Carbon::now()->isAfter(Carbon::parse($s->first()->post->endDate)),
+                    'giftCard' => $s->first()->giftCard == 1,
                 ];
                 $result->push($aux);
             }
@@ -95,7 +99,85 @@ class HomeController extends Controller
         }
     }
 
-    //--------------------------------------Administracion de productos -----------------------------------
+    public function askForGiftCard(Request $request)
+    {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user->role == 0) {
+            $subscription = Subscription::where('id',$request['subscription'])->first();
+            if(!$subscription) {
+                return response()->json(['error' => 'Subscription not found', 404]);
+            }
+            $subscription->giftCard = 1;
+            $subscription->save();
+
+            return $subscription;
+        } else {
+            return response()->json(['error' => 'Forbidden', 403]);
+        }
+    }
+    //--------------------------------------BackOffice------------------------------------------------------------------
+    public function graphs(Request $request)
+    {
+        $user = $this->checkLogIn($request['token']);
+        //TODO hacer que los graficos tengan valores posta
+
+        if($user && $user->role == 1) {
+
+            $data = [
+                [
+                    'title' => 'Ventas del mes',
+                    'xlabel' => 'Semana',
+                    'ylabel' => 'Ventas (AR$)',
+                    'data' => [
+                        ['x' => '1', 'y' => 570000],
+                        ['x' => '2', 'y' => 470000],
+                        ['x' => '3', 'y' => 370000],
+                        ['x' => '4', 'y' => 270000],
+                    ]
+                ],
+                [
+                    'title' => 'Ultimos 6 meses',
+                    'xlabel' => 'Fecha',
+                    'ylabel' => 'Ventas (AR$)',
+                    'data' => [
+                        ['x' => 'Ene', 'y' => 570000],
+                        ['x' => 'Feb', 'y' => 470000],
+                        ['x' => 'Mar', 'y' => 370000],
+                        ['x' => 'Abr', 'y' => 270000],
+                        ['x' => 'May', 'y' => 170000],
+                        ['x' => 'Jun', 'y' => 570000],
+                        ['x' => 'Jul', 'y' => 570000],
+                    ]
+                ],
+                [
+                    'title' => 'Venta Anual 2019',
+                    'xlabel' => 'Fecha',
+                    'ylabel' => 'Ventas (AR$)',
+                    'data' => [
+                        ['x' => 'Ene', 'y' => 570000],
+                        ['x' => 'Feb', 'y' => 470000],
+                        ['x' => 'Mar', 'y' => 370000],
+                        ['x' => 'Abr', 'y' => 270000],
+                        ['x' => 'May', 'y' => 170000],
+                        ['x' => 'Jun', 'y' => 570000],
+                        ['x' => 'Jul', 'y' => 570000],
+                        ['x' => 'Ago', 'y' => 570000],
+                        ['x' => 'Sep', 'y' => 470000],
+                        ['x' => 'Oct', 'y' => 370000],
+                        ['x' => 'Nov', 'y' => 270000],
+                        ['x' => 'Dic', 'y' => 170000],
+                    ]
+                ]
+            ];
+
+            return $data;
+        } else {
+            return response()->json(['error' => 'Forbidden', 403]);
+        }
+    }
+
+    //--------------------------------------Administracion de productos ------------------------------------------------
     public function addProduct(Request $request)
     {
         $user = $this->checkLogIn($request['token']);
@@ -222,27 +304,12 @@ class HomeController extends Controller
         }
     }
 
-    public function addProductCategories(Request $request)
-    {
-        $user = $this->checkLogIn($request['token']);
-
-        if($user && $user->role == 1) {
-            $subscription = Product_Category::create([
-                'category_id' => $request['category_id'],
-                'product_id' => $request['product_id'],
-            ]);
-            return $subscription;
-        } else {
-            return response()->json(['error' => 'Forbidden', 403]);
-        }
-    }
-
     public function addCategory(Request $request)
     {
         $user = $this->checkLogIn($request['token']);
 
         if($user && $user->role == 1) {
-            $subscription = Product_Category::create([
+            $subscription = Category::create([
                 'title' => $request['title'],
             ]);
             return $subscription;
@@ -256,7 +323,7 @@ class HomeController extends Controller
         $user = $this->checkLogIn($request['token']);
 
         if($user && $user->role == 1) {
-            $subscription = Product_Category::create([
+            $subscription = Subcategory::create([
             'title' => $request['title'],
             'category_id' => $request['category_id'],
         ]);
@@ -306,5 +373,20 @@ class HomeController extends Controller
 //                $discount += random_int(5,7) / 100;
 //            }
 //         }
+//    }
+
+//    public function addProductCategories(Request $request)
+//    {
+//        $user = $this->checkLogIn($request['token']);
+//
+//        if($user && $user->role == 1) {
+//            $subscription = Product_Category::create([
+//                'category_id' => $request['category_id'],
+//                'product_id' => $request['product_id'],
+//            ]);
+//            return $subscription;
+//        } else {
+//            return response()->json(['error' => 'Forbidden', 403]);
+//        }
 //    }
 }

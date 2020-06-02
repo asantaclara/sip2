@@ -48,7 +48,11 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, true)) {
             // Authentireturcation passed...
-            return response()->json([['success' => 'success', 'token'=> Auth::user()->getRememberToken()], 200]);
+            return response()->json([[
+                'success' => 'success',
+                'token'=> Auth::user()->getRememberToken(),
+                'role'=> Auth::user()->role],
+                200]);
         } else {
             return abort(403,'Login');
         }
