@@ -59,7 +59,6 @@ class HomeController extends Controller
     public function subscriptions(Request $request)
     {
         $user = $this->checkLogIn($request['token']);
-        $user = User::where('id',2)->first();
 
         if($user && $user->role == 0) {
             $result = collect();
@@ -82,7 +81,7 @@ class HomeController extends Controller
                     'endDate' => $s->first()->post->endDate,
                     'photos' => $s->first()->post->product->photos,
                     'productTitle' => $s->first()->post->product->title,
-                    'finalizada' => Carbon::now()->isAfter(Carbon::parse($s->first()->post->endDate)),
+                    'finalizada' => !$s->first()->post->estado(),
                     'giftCard' => $s->first()->giftCard == 1,
                 ];
                 $result->push($aux);
@@ -104,14 +103,16 @@ class HomeController extends Controller
         $user = $this->checkLogIn($request['token']);
 
         if($user && $user->role == 0) {
-            $subscription = Subscription::where('id',$request['subscription'])->first();
-            if(!$subscription) {
-                return response()->json(['error' => 'Subscription not found', 404]);
+            $post = Post::where('id',$request['post'])->first();
+            if(!$post) {
+                return response()->json(['error' => 'Post not found', 404]);
             }
-            $subscription->giftCard = 1;
-            $subscription->save();
-
-            return $subscription;
+            $subscriptions = Subscription::where('post_id', $post->id)->where('user_id',$user->id)->get();
+            foreach ($subscriptions as $subscription){
+                $subscription->giftCard = 1;
+                $subscription->save();
+            }
+            return $subscriptions;
         } else {
             return response()->json(['error' => 'Forbidden', 403]);
         }
@@ -171,6 +172,67 @@ class HomeController extends Controller
                 ]
             ];
 
+            return $data;
+        } else {
+            return response()->json(['error' => 'Forbidden', 403]);
+        }
+    }
+
+    public function backOfficeTable(Request $request)
+    {
+        $user = $this->checkLogIn($request['token']);
+        if($user && $user->role == 1) {
+            $data = [
+                [
+                    ['id' => 'foto', 'label' => 'Foto'],
+                    ['id' => 'nombre', 'label' => 'Nombre'],
+                    ['id' => 'precio', 'label' => 'Precio'],
+                    ['id' => 'precioActual', 'label' => 'Precio Actual'],
+                    ['id' => 'categorias', 'label' => 'Categorias'],
+                    ['id' => 'estado', 'label' => 'Estado'],
+                    ['id' => 'suscriptos', 'label' => 'Suscriptos'],
+                    ['id' => 'fecha', 'label' => 'Fecha Cierre']
+                ],
+                []
+            ];
+            $posts = Post::all();
+            foreach ($posts as $p) {
+                $aux = [
+                    'foto' => $p->product->photos->first()->url,
+                    'nombre' => $p->product->title,
+                    'precio' => '$'.number_format($p->product->price,2),
+                    'precioActual' => '$'.number_format($p->actualPrice(),2),
+                    'categorias' => $p->product->tags->first()->name,
+                    'estado' => $p->estado(),
+                    'suscriptos' => $p->qtySuscriptors(),
+                    'fecha' => Carbon::parse($p->endDate)->format('d/m/yy')
+                ];
+                array_push($data[1],$aux);
+            }
+            return $data;
+        } else {
+            return response()->json(['error' => 'Forbidden', 403]);
+        }
+    }
+    public function card(Request $request)
+    {
+        $user = $this->checkLogIn($request['token']);
+        if($user && $user->role == 1) {
+
+
+            $posts = Post::where('endDate', '>=', Carbon::parse($request['date'])->startOfDay()->toDateTimeString())
+                ->where('endDate', '<=', Carbon::parse($request['date'])->endOfDay()->toDateTimeString())
+                ->get();
+            $total = 0;
+            foreach ($posts as $p) {
+                $total = $total + $p->qtySuscriptors() * $p->actualPrice();
+            }
+            $data = [
+                'type' => 'Facturacion del dia',
+                'value' => '$'.number_format($total,2),
+                'date' => $request['date'],
+                'action' => 'Ver detalle'
+            ];
             return $data;
         } else {
             return response()->json(['error' => 'Forbidden', 403]);

@@ -2,6 +2,7 @@
 
 namespace App;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
@@ -84,5 +85,10 @@ class Post extends Model
             array_push($result,$aux);
         }
         return $result;
+    }
+
+    public function estado()
+    {
+        return Carbon::now()->isBefore(Carbon::parse($this->endDate));
     }
 }
