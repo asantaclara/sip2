@@ -124,7 +124,6 @@ class HomeController extends Controller
         //TODO hacer que los graficos tengan valores posta
 
         if($user && $user->role == 1) {
-
             $data = [
                 [
                     'title' => 'Ventas del mes',
@@ -171,7 +170,6 @@ class HomeController extends Controller
                     ]
                 ]
             ];
-
             return $data;
         } else {
             return response()->json(['error' => 'Forbidden', 403]);
