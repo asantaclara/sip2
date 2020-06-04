@@ -89,6 +89,6 @@ class Post extends Model
 
     public function estado()
     {
-        return Carbon::now()->isBefore(Carbon::parse($this->endDate));
+        return Carbon::now()->subHours(3)->isBefore(Carbon::parse($this->endDate));
     }
 }

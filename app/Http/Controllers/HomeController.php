@@ -16,8 +16,10 @@ use App\Tag_Product;
 use App\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use mysql_xdevapi\Result;
 
 class HomeController extends Controller
 {
@@ -63,6 +65,7 @@ class HomeController extends Controller
         if($user && $user->role == 0) {
             $result = collect();
             $subscriptions = Subscription::where('user_id', $user->id)->get()->groupBy('post_id');
+
             if(count($subscriptions) < 1) {
                 return response()->json(['error' => 'No subscriptions found, 404']);
             }
@@ -83,6 +86,7 @@ class HomeController extends Controller
                     'productTitle' => $s->first()->post->product->title,
                     'finalizada' => !$s->first()->post->estado(),
                     'giftCard' => $s->first()->giftCard == 1,
+                    'alert' => count(Carbon::now()->subHours(3)->minutesUntil(Carbon::parse($s->first()->post->endDate))) < 60,
                 ];
                 $result->push($aux);
             }
@@ -92,7 +96,21 @@ class HomeController extends Controller
                 'totalPaid' => $result->sum('paid'),
                 'total' => $result->sum('totalPrice') - $result->sum('totalDiscountAmount') - $result->sum('paid'),
             ];
-            return [$result, $aux2];
+            $sortedScores = Arr::sort($result, function($student)
+            {
+                return $student['endDate'];
+            });
+            $finalizadas = [];
+            $activas = [];
+            foreach ($sortedScores as $s) {
+                if($s['finalizada']) {
+                    array_push($finalizadas,$s);
+
+                } else {
+                    array_push($activas,$s);
+                }
+            }
+            return [$activas, $aux2,$finalizadas];
         } else {
             return response()->json(['error' => 'Forbidden', 403]);
         }
