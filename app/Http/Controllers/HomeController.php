@@ -37,7 +37,7 @@ class HomeController extends Controller
 
         if($user && $user->role == 0) {
             $qty = floor($request['qty']);
-            $post = Post::where('id', $request['post_id'])->get()->first();
+            $post = Post::where('id', $request['post_id'])->where('active',1)->get()->first();
             if(!$post) {
                 return response()->json(['error' => 'Post not found', 406]);
 
@@ -121,7 +121,7 @@ class HomeController extends Controller
         $user = $this->checkLogIn($request['token']);
 
         if($user && $user->role == 0) {
-            $post = Post::where('id',$request['post'])->first();
+            $post = Post::where('id',$request['post'])->where('active',1)->first();
             if(!$post) {
                 return response()->json(['error' => 'Post not found', 404]);
             }
@@ -205,23 +205,24 @@ class HomeController extends Controller
                     ['id' => 'precio', 'label' => 'Precio'],
                     ['id' => 'precioActual', 'label' => 'Precio Actual'],
                     ['id' => 'categorias', 'label' => 'Categorias'],
-                    ['id' => 'estado', 'label' => 'Estado'],
+                    ['id' => 'activo', 'label' => 'Activo'],
                     ['id' => 'suscriptos', 'label' => 'Suscriptos'],
                     ['id' => 'fecha', 'label' => 'Fecha Cierre']
                 ],
                 []
             ];
-            $posts = Post::all();
+            $posts = Post::all()->sortByDesc('created_at');
             foreach ($posts as $p) {
                 $aux = [
+                    'id' => $p->id,
                     'foto' => $p->product->photos->first()->url,
                     'nombre' => $p->product->title,
                     'precio' => '$'.number_format($p->product->price,2),
                     'precioActual' => '$'.number_format($p->actualPrice(),2),
                     'categorias' => $p->product->tags->first()->name,
-                    'estado' => $p->estado(),
+                    'activo' => $p->active == 1,
                     'suscriptos' => $p->qtySuscriptors(),
-                    'fecha' => Carbon::parse($p->endDate)->format('d/m/yy')
+                    'fecha' => Carbon::parse($p->endDate)->format('d/m/yy'),
                 ];
                 array_push($data[1],$aux);
             }
@@ -230,6 +231,37 @@ class HomeController extends Controller
             return response()->json(['error' => 'Forbidden', 403]);
         }
     }
+
+    public function products(Request $request)
+    {
+        $user = $this->checkLogIn($request['token']);
+        if($user && $user->role == 1) {
+            $products = Product::all();
+            foreach ($products as $p) {
+                $p->photos;
+            }
+            return $products;
+        } else {
+            return response()->json(['error' => 'Forbidden', 403]);
+        }
+    }
+
+    public function changeStatePost(Request $request)
+    {
+        $user = $this->checkLogIn($request['token']);
+        if($user && $user->role == 1) {
+            $post = Post::where('id',$request['post_id'])->get()->first();
+            if(!$post) {
+                return response()->json(['error' => 'Post not found', 404]);
+            }
+            $post->active = $request['state'];
+            $post->save();
+            return $post;
+        } else {
+            return response()->json(['error' => 'Forbidden', 403]);
+        }
+    }
+
     public function card(Request $request)
     {
         $user = $this->checkLogIn($request['token']);
@@ -317,6 +349,39 @@ class HomeController extends Controller
             'endDate' => $request['endDate'],
             ]);
         return $subscription;
+        } else {
+            return response()->json(['error' => 'Forbidden', 403]);
+        }
+    }
+
+    public function createNewPost(Request $request)
+    {
+        $user = $this->checkLogIn($request['token']);
+        $user = User::where('id',1)->get()->first();
+        if($user && $user->role == 1) {
+
+            $percentage = explode("|", $request['percentage']);
+            $qty = explode("|", $request['qty']);
+
+            if(count($percentage) != count($qty)) {
+                return response()->json(['error' => 'Incompatible size', 404]);
+            }
+            $post = Post::create([
+               'product_id' => $request['product_id'],
+               'startDate' => $request['startDate'],
+               'endDate' => Carbon::parse($request['startDate'])->addHours($request['duration']),
+
+           ]);
+
+            for ($i = 0 ; $i < count($percentage) ; $i++) {
+               Discount::create([
+                   'post_id' => $post->id,
+                   'quantityStart' => $qty[$i],
+                   'discount' => $percentage[$i]
+               ]);
+            }
+
+            return [$post, Discount::where ('post_id',$post->id)->get()];
         } else {
             return response()->json(['error' => 'Forbidden', 403]);
         }

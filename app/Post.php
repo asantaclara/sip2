@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class Post extends Model
 {
-    protected $fillable = ['product_id','startDate','endDate'];
+    protected $fillable = ['product_id','startDate','endDate','active'];
 
     public function product()
     {
@@ -87,7 +87,7 @@ class Post extends Model
         return $result;
     }
 
-    public function estado()
+    public function finalizado()
     {
         return Carbon::now()->subHours(3)->isBefore(Carbon::parse($this->endDate));
     }

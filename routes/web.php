@@ -41,6 +41,9 @@ Route::get('/graphs', 'HomeController@graphs');
 Route::get('/askForGiftCard', 'HomeController@askForGiftCard');
 Route::get('/backOfficeTable', 'HomeController@backOfficeTable');
 Route::get('/card', 'HomeController@card');
+Route::get('/products', 'HomeController@products');
+Route::get('/changeStatePost', 'HomeController@changeStatePost');
+Route::get('/createNewPost', 'HomeController@createNewPost');
 
 Route::get('/subscribe', 'HomeController@subscribe');
 Route::get('/subscriptions', 'HomeController@subscriptions');

@@ -31,7 +31,7 @@ class WebController extends Controller
     {
         $tags = explode(",",$request['tags']);
         $productsId = Tag_Product::whereIn('tag_id', $tags)->pluck('product_id');
-        $posts = Post::whereIn('product_id',$productsId)->get();
+        $posts = Post::whereIn('product_id',$productsId)->where('active',1)->get();
         foreach ($posts as $p) {
             $p->product->photos;
             $p->product->tags;
@@ -45,7 +45,7 @@ class WebController extends Controller
     public function getPostById(Request $request)
     {
         $id =$request->id;
-        $post = Post::where('id',$id)->first();
+        $post = Post::where('id',$id)->where('active',1)->first();
         if($post) {
             $post->qtySuscriptions = $post->qtySuscriptors();
             $post->discount = 100 * $post->actualDiscount();
