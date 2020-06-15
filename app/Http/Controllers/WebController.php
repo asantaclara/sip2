@@ -32,14 +32,19 @@ class WebController extends Controller
         $tags = explode(",",$request['tags']);
         $productsId = Tag_Product::whereIn('tag_id', $tags)->pluck('product_id');
         $posts = Post::whereIn('product_id',$productsId)->where('active',1)->get();
+        $aux = collect();
+
         foreach ($posts as $p) {
             $p->product->photos;
             $p->product->tags;
             $p->actualPrice = $p->actualPrice();
             $p->actualDiscount = $p->actualDiscount() * 100;
             $p->productPrice = $p->product->price;
+            if($p->finalizado()){
+                $aux->push($p);
+            }
         }
-        return $posts;
+        return $aux;
     }
 
     public function getPostById(Request $request)

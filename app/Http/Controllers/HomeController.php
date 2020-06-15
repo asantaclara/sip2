@@ -84,17 +84,19 @@ class HomeController extends Controller
                     'endDate' => $s->first()->post->endDate,
                     'photos' => $s->first()->post->product->photos,
                     'productTitle' => $s->first()->post->product->title,
-                    'finalizada' => !$s->first()->post->estado(),
+                    'finalizada' => !$s->first()->post->finalizado(),
                     'giftCard' => $s->first()->giftCard == 1,
                     'alert' => count(Carbon::now()->subHours(3)->minutesUntil(Carbon::parse($s->first()->post->endDate))) < 60,
                 ];
                 $result->push($aux);
             }
             $aux2 = [
-                'beforeDiscount' => $result->sum('totalPrice'),
-                'discount' => $result->sum('totalDiscountAmount'),
-                'totalPaid' => $result->sum('paid'),
-                'total' => $result->sum('totalPrice') - $result->sum('totalDiscountAmount') - $result->sum('paid'),
+                'beforeDiscount' => $result->where('finalizada',0)->sum('totalPrice'),
+                'discount' => $result->where('finalizada',0)->sum('totalDiscountAmount'),
+                'totalPaid' => $result->where('finalizada',0)->sum('paid'),
+                'total' => $result->where('finalizada',0)->sum('totalPrice') -
+                    $result->where('finalizada',0)->sum('totalDiscountAmount') -
+                    $result->where('finalizada',0)->sum('paid'),
             ];
             $sortedScores = Arr::sort($result, function($student)
             {
@@ -125,12 +127,44 @@ class HomeController extends Controller
             if(!$post) {
                 return response()->json(['error' => 'Post not found', 404]);
             }
+
+            if(!Carbon::now()->isBefore(Carbon::parse($post->endDate)->addDays(2))) {
+                return response()->json(['error' => 'More than 48hrs later', 404]);
+            }
+
+            if(Carbon::now()->isBefore(Carbon::parse($post->endDate))) {
+                return response()->json(['error' => 'Post not finished', 404]);
+            }
+
             $subscriptions = Subscription::where('post_id', $post->id)->where('user_id',$user->id)->get();
+
             foreach ($subscriptions as $subscription){
                 $subscription->giftCard = 1;
                 $subscription->save();
             }
             return $subscriptions;
+        } else {
+            return response()->json(['error' => 'Forbidden', 403]);
+        }
+    }
+
+    public function userHasSubscription(Request $request)
+    {
+        $user = $this->checkLogIn($request['token']);
+
+        if($user && $user->role == 0) {
+            $post = Post::where('id', $request['post_id'])->first();
+            if(!$post) {
+                return response()->json(['error' => 'Post not found', 404]);
+            }
+
+            $subscriptions = Subscription::where('post_id', $request['post_id'])->where('user_id', $user->id)->first();
+
+            if(!$subscriptions) {
+                return false;
+            } else {
+                return true;
+            }
         } else {
             return response()->json(['error' => 'Forbidden', 403]);
         }
