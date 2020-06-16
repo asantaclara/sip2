@@ -15,10 +15,12 @@ use App\Tag;
 use App\Tag_Product;
 use App\User;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Laminas\Diactoros\Exception\UploadedFileErrorException;
 use mysql_xdevapi\Result;
 
 class HomeController extends Controller
@@ -161,9 +163,9 @@ class HomeController extends Controller
             $subscriptions = Subscription::where('post_id', $request['post_id'])->where('user_id', $user->id)->first();
 
             if(!$subscriptions) {
-                return false;
+                return 0;
             } else {
-                return true;
+                return 1;
             }
         } else {
             return response()->json(['error' => 'Forbidden', 403]);
@@ -174,38 +176,54 @@ class HomeController extends Controller
     {
         $user = $this->checkLogIn($request['token']);
         //TODO hacer que los graficos tengan valores posta
-
+//        $user = User::where('id',1)->first();
         if($user && $user->role == 1) {
+
+            $query = "select giftCard, count(*) as choise from (select user_id, post_id, giftCard from subscriptions s
+            group by post_id, user_id, giftCard order by user_id , post_id) as x group by giftCard";
+            $giftCards = User::hydrate(DB::select($query));
+
             $data = [
+                [
+                    'title'=> "Pagos con giftcards historico",
+                    'type' => "pie",
+                    'data' => [
+                        [ 'name' => 'Pago Normal', 'value' => $giftCards->first()->choise],
+                        [ 'name' => 'Pago con Giftcard', 'value' => $giftCards->last()->choise ]
+                    ]
+                ],
                 [
                     'title' => 'Ventas del mes',
                     'xlabel' => 'Semana',
                     'ylabel' => 'Ventas (AR$)',
+                    'type' => "line",
                     'data' => [
                         ['x' => '1', 'y' => 570000],
-                        ['x' => '2', 'y' => 470000],
-                        ['x' => '3', 'y' => 370000],
-                        ['x' => '4', 'y' => 270000],
+                        ['x' => '2', 'y' => 1470000],
+                        ['x' => '3', 'y' => 2370000],
+                        ['x' => '4', 'y' => 3270000],
                     ]
                 ],
                 [
                     'title' => 'Ultimos 6 meses',
                     'xlabel' => 'Fecha',
                     'ylabel' => 'Ventas (AR$)',
+                    'type' => "line",
                     'data' => [
                         ['x' => 'Ene', 'y' => 570000],
                         ['x' => 'Feb', 'y' => 470000],
-                        ['x' => 'Mar', 'y' => 370000],
-                        ['x' => 'Abr', 'y' => 270000],
-                        ['x' => 'May', 'y' => 170000],
-                        ['x' => 'Jun', 'y' => 570000],
-                        ['x' => 'Jul', 'y' => 570000],
+                        ['x' => 'Mar', 'y' => 1370000],
+                        ['x' => 'Abr', 'y' => 2270000],
+                        ['x' => 'May', 'y' => 3170000],
+                        ['x' => 'Jun', 'y' => 4570000],
+                        ['x' => 'Jul', 'y' => 5570000],
                     ]
                 ],
                 [
                     'title' => 'Venta Anual 2019',
                     'xlabel' => 'Fecha',
                     'ylabel' => 'Ventas (AR$)',
+                    'type' => "line",
                     'data' => [
                         ['x' => 'Ene', 'y' => 570000],
                         ['x' => 'Feb', 'y' => 470000],
@@ -215,10 +233,10 @@ class HomeController extends Controller
                         ['x' => 'Jun', 'y' => 570000],
                         ['x' => 'Jul', 'y' => 570000],
                         ['x' => 'Ago', 'y' => 570000],
-                        ['x' => 'Sep', 'y' => 470000],
-                        ['x' => 'Oct', 'y' => 370000],
-                        ['x' => 'Nov', 'y' => 270000],
-                        ['x' => 'Dic', 'y' => 170000],
+                        ['x' => 'Sep', 'y' => 1470000],
+                        ['x' => 'Oct', 'y' => 2370000],
+                        ['x' => 'Nov', 'y' => 3270000],
+                        ['x' => 'Dic', 'y' => 4170000],
                     ]
                 ]
             ];
@@ -391,7 +409,7 @@ class HomeController extends Controller
     public function createNewPost(Request $request)
     {
         $user = $this->checkLogIn($request['token']);
-        $user = User::where('id',1)->get()->first();
+//        $user = User::where('id',1)->get()->first();
         if($user && $user->role == 1) {
 
             $percentage = explode("|", $request['percentage']);
@@ -411,7 +429,7 @@ class HomeController extends Controller
                Discount::create([
                    'post_id' => $post->id,
                    'quantityStart' => $qty[$i],
-                   'discount' => $percentage[$i]
+                   'discount' => $percentage[$i]/100
                ]);
             }
 
