@@ -15,6 +15,7 @@ use App\Tag;
 use App\Tag_Product;
 use App\User;
 use Carbon\Carbon;
+use HttpException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -41,11 +42,11 @@ class HomeController extends Controller
             $qty = floor($request['qty']);
             $post = Post::where('id', $request['post_id'])->where('active',1)->get()->first();
             if(!$post) {
-                return response()->json(['error' => 'Post not found', 406]);
+                return response()->json(['error' => 'Post not found'], 406);
 
             }
             if($qty < 1){
-                return response()->json(['error' => 'quantity < 1', 406]);
+                return response()->json(['error' => 'quantity < 1'], 406);
             }
             $subscription = Subscription::create([
                 'post_id' => $request['post_id'],
@@ -56,7 +57,7 @@ class HomeController extends Controller
             ]);
             return $subscription;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -69,7 +70,7 @@ class HomeController extends Controller
             $subscriptions = Subscription::where('user_id', $user->id)->get()->groupBy('post_id');
 
             if(count($subscriptions) < 1) {
-                return response()->json(['error' => 'No subscriptions found, 404']);
+                return response()->json(['error' => 'No subscriptions found'], 404);
             }
             foreach ($subscriptions as $s) {
                 $aux = [
@@ -116,7 +117,7 @@ class HomeController extends Controller
             }
             return [$activas, $aux2,$finalizadas];
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -127,15 +128,15 @@ class HomeController extends Controller
         if($user && $user->role == 0) {
             $post = Post::where('id',$request['post'])->where('active',1)->first();
             if(!$post) {
-                return response()->json(['error' => 'Post not found', 404]);
+                return response()->json(['error' => 'Post not found'], 404);
             }
 
             if(!Carbon::now()->isBefore(Carbon::parse($post->endDate)->addDays(2))) {
-                return response()->json(['error' => 'More than 48hrs later', 404]);
+                return response()->json(['error' => 'More than 48hrs later'], 404);
             }
 
             if(Carbon::now()->isBefore(Carbon::parse($post->endDate))) {
-                return response()->json(['error' => 'Post not finished', 404]);
+                return response()->json(['error' => 'Post not finished'], 404);
             }
 
             $subscriptions = Subscription::where('post_id', $post->id)->where('user_id',$user->id)->get();
@@ -146,7 +147,7 @@ class HomeController extends Controller
             }
             return $subscriptions;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -157,7 +158,7 @@ class HomeController extends Controller
         if($user && $user->role == 0) {
             $post = Post::where('id', $request['post_id'])->first();
             if(!$post) {
-                return response()->json(['error' => 'Post not found', 404]);
+                return response()->json(['error' => 'Post not found'], 404);
             }
 
             $subscriptions = Subscription::where('post_id', $request['post_id'])->where('user_id', $user->id)->first();
@@ -168,7 +169,7 @@ class HomeController extends Controller
                 return 1;
             }
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
     //--------------------------------------BackOffice------------------------------------------------------------------
@@ -242,13 +243,14 @@ class HomeController extends Controller
             ];
             return $data;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
     public function backOfficeTable(Request $request)
     {
         $user = $this->checkLogIn($request['token']);
+//        $user = User::where('id',1)->first();
         if($user && $user->role == 1) {
             $data = [
                 [
@@ -259,7 +261,8 @@ class HomeController extends Controller
                     ['id' => 'categorias', 'label' => 'Categorias'],
                     ['id' => 'activo', 'label' => 'Activo'],
                     ['id' => 'suscriptos', 'label' => 'Suscriptos'],
-                    ['id' => 'fecha', 'label' => 'Fecha Cierre']
+                    ['id' => 'fecha', 'label' => 'Fecha Cierre'],
+                    ['id' => 'estado', 'label' => 'Estado']
                 ],
                 []
             ];
@@ -275,12 +278,49 @@ class HomeController extends Controller
                     'activo' => $p->active == 1,
                     'suscriptos' => $p->qtySuscriptors(),
                     'fecha' => Carbon::parse($p->endDate)->format('d/m/yy'),
+                    'estado' => $p->finalizado() ? 'En curso' : 'Finalizado',
                 ];
                 array_push($data[1],$aux);
             }
             return $data;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+    }
+
+    public function postDetails(Request $request)
+    {
+        $user = $this->checkLogIn($request['token']);
+//        $user = User::where('id',1)->first();
+        if($user && $user->role == 1) {
+
+            $subscribers = [];
+
+            $post = Post::where('id', $request['post_id'])->first();
+
+            $subs = Subscription::join('users as u', 'u.id','subscriptions.user_id')
+                ->select('email','giftCard')
+                ->distinct()
+                ->where('post_id', $post->id)
+                ->get();
+
+            if(count($subs) > 0) {
+                foreach ($subs as $s) {
+                    array_push($subscribers, ['email' => $s->email, 'payment' => $s->giftCard ? 'Gift Card' : 'Debito']);
+                }
+
+                $payments = [
+                    ['label' => 'Pagos Giftcard', 'value' => $subs->where('giftCard',1)->count()/$subs->count() * 100],
+                    ['label' => 'Pagos Debito', 'value' => $subs->where('giftCard',0)->count()/$subs->count() * 100]
+                ];
+
+                return ['subscribers' => $subscribers, 'payments' => $payments];
+            } else {
+                return [];
+            }
+
+        } else {
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -294,7 +334,7 @@ class HomeController extends Controller
             }
             return $products;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -304,13 +344,13 @@ class HomeController extends Controller
         if($user && $user->role == 1) {
             $post = Post::where('id',$request['post_id'])->get()->first();
             if(!$post) {
-                return response()->json(['error' => 'Post not found', 404]);
+                return response()->json(['error' => 'Post not found'], 404);
             }
             $post->active = $request['state'];
             $post->save();
             return $post;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -335,7 +375,7 @@ class HomeController extends Controller
             ];
             return $data;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -352,7 +392,7 @@ class HomeController extends Controller
             ]);
             return $product;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -371,7 +411,7 @@ class HomeController extends Controller
             ]);
             return $subscription;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -386,7 +426,7 @@ class HomeController extends Controller
             ]);
             return $subscription;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -400,9 +440,9 @@ class HomeController extends Controller
             'startDate' => $request['startDate'],
             'endDate' => $request['endDate'],
             ]);
-        return $subscription;
+            return $subscription;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -416,7 +456,7 @@ class HomeController extends Controller
             $qty = explode("|", $request['qty']);
 
             if(count($percentage) != count($qty)) {
-                return response()->json(['error' => 'Incompatible size', 404]);
+                return response()->json(['error' => 'Incompatible size'], 404);
             }
             $post = Post::create([
                'product_id' => $request['product_id'],
@@ -435,7 +475,7 @@ class HomeController extends Controller
 
             return [$post, Discount::where ('post_id',$post->id)->get()];
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -450,7 +490,7 @@ class HomeController extends Controller
             ]);
         return $subscription;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -466,7 +506,7 @@ class HomeController extends Controller
             ]);
             return $subscription;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -480,7 +520,7 @@ class HomeController extends Controller
             ]);
             return $subscription;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -495,7 +535,7 @@ class HomeController extends Controller
             ]);
             return $subscription;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -509,7 +549,7 @@ class HomeController extends Controller
             ]);
             return $subscription;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -524,7 +564,7 @@ class HomeController extends Controller
         ]);
             return $subscription;
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -535,7 +575,7 @@ class HomeController extends Controller
         if($user && $user->role == 1) {
             return DB::select( DB::raw('SELECT * FROM '.$request['tabla']) );
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -546,7 +586,7 @@ class HomeController extends Controller
         if($user && $user->role == 1) {
             return DB::select( DB::raw('DELETE FROM '.$request['tabla'].' WHERE ID = '.$request['id']) );
         } else {
-            return response()->json(['error' => 'Forbidden', 403]);
+            return response()->json(['error' => 'Forbidden'], 403);
         }
     }
 
@@ -581,7 +621,7 @@ class HomeController extends Controller
 //            ]);
 //            return $subscription;
 //        } else {
-//            return response()->json(['error' => 'Forbidden', 403]);
+//            return response()->json(['error' => 'Forbidden'], 403);
 //        }
 //    }
 }
