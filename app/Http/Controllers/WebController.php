@@ -53,10 +53,10 @@ class WebController extends Controller
         $post = Post::where('id',$id)->where('active',1)->first();
         if($post) {
             $post->qtySuscriptions = $post->qtySuscriptors();
-            $post->discount = number_format(100 * $post->actualDiscount(),2);
-            $post->nextDiscount = number_format(100 * $post->nextDiscount(),2);
-            $post->actualPrice = number_format($post->actualPrice(),2);
-            $post->originalPrice = number_format($post->product->price,2);
+            $post->discount = 100 * $post->actualDiscount();
+            $post->nextDiscount = 100 * $post->nextDiscount();
+            $post->actualPrice = $post->actualPrice();
+            $post->originalPrice = $post->product->price;
             $post->qtyToNextDiscount = $post->qtyToNextDiscount();
             $post->nextDiscountPrice = (100 - $post->nextDiscount) * $post->product->price / 100;
             $post->recommendations = $post->recommendations();
