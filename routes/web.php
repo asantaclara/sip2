@@ -46,6 +46,7 @@ Route::get('/changeStatePost', 'HomeController@changeStatePost');
 Route::get('/createNewPost', 'HomeController@createNewPost');
 Route::get('/userHasSubscription', 'HomeController@userHasSubscription');
 Route::get('/postDetails', 'HomeController@postDetails');
+Route::get('/removePost', 'HomeController@removePost');
 
 Route::get('/subscribe', 'HomeController@subscribe');
 Route::get('/subscriptions', 'HomeController@subscriptions');

@@ -304,14 +304,24 @@ class HomeController extends Controller
                 ->where('post_id', $post->id)
                 ->get();
 
+            $totalSale = $post->actualPrice() * $post->qtySuscriptors();
+
+
             if(count($subs) > 0) {
                 foreach ($subs as $s) {
                     array_push($subscribers, ['email' => $s->email, 'payment' => $s->giftCard ? 'Gift Card' : 'Debito']);
                 }
 
+                $valueGiftCard = $subs->where('giftCard',1)->count()/$subs->count();
                 $payments = [
-                    ['label' => 'Pagos Giftcard', 'value' => $subs->where('giftCard',1)->count()/$subs->count() * 100],
-                    ['label' => 'Pagos Debito', 'value' => $subs->where('giftCard',0)->count()/$subs->count() * 100]
+                    [   'label' => 'Pagos Giftcard',
+                        'value' => $valueGiftCard * 100,
+                        'moneyamount' => $totalSale * $valueGiftCard
+                    ],
+                    [   'label' => 'Pagos Debito',
+                        'value' => (1-$valueGiftCard) * 100,
+                        'moneyamount' => $totalSale * (1-$valueGiftCard)
+                    ]
                 ];
 
                 return ['subscribers' => $subscribers, 'payments' => $payments];
@@ -333,6 +343,24 @@ class HomeController extends Controller
                 $p->photos;
             }
             return $products;
+        } else {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+    }
+    public function removePost(Request $request)
+    {
+        $user = $this->checkLogIn($request['token']);
+//                $user = User::where('id',1)->get()->first();
+
+        if($user && $user->role == 1) {
+            $post = Post::where('active',0)->where('id',$request['post_id'])->first();
+            if($post){
+               Discount::where('post_id', $post->id)->delete();
+                $post->delete();
+                return $post;
+            } else {
+                return response()->json(['error' => 'Post Not Found'], 404);
+            }
         } else {
             return response()->json(['error' => 'Forbidden'], 403);
         }
